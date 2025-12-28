@@ -1,0 +1,8 @@
+Telethon
+cryptg
+psutil
+uvloop
+waitress
+orjson
+ffmpeg
+aiohttp
