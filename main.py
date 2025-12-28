@@ -167,7 +167,7 @@ async def start(event):
     
     if not db.check_legal_acceptance(event.sender_id):
         LOGGER(__name__).info(f"User {event.sender_id} needs to accept legal terms")
-        await show_legal_acceptance(event)
+        await show_legal_acceptance(event, bot)
         return
     
     # Check if this is a verification deep link (format: /start verify_CODE)
@@ -495,9 +495,27 @@ async def handle_download(bot_client, event, post_url: str, user_client=None, in
                         f"✅ **Download complete**{remaining_msg}",
                         buttons=upgrade_keyboard.to_telethon()
                     )
+                    
+                    # Show RichAds after download completes for free users
+                    if richads.is_enabled():
+                        try:
+                            sender = await event.get_sender()
+                            lang_code = getattr(sender, 'lang_code', 'en') or 'en'
+                            await richads.send_ad_to_user(bot, event.chat_id, lang_code)
+                        except Exception as ad_error:
+                            LOGGER(__name__).warning(f"Failed to send RichAd after download: {ad_error}")
                 else:
                     # Premium/Admin users: simple completion message without buttons
                     await event.respond("✅ **Download complete**")
+                    
+                    # Show RichAds after download completes for premium users too
+                    if richads.is_enabled():
+                        try:
+                            sender = await event.get_sender()
+                            lang_code = getattr(sender, 'lang_code', 'en') or 'en'
+                            await richads.send_ad_to_user(bot, event.chat_id, lang_code)
+                        except Exception as ad_error:
+                            LOGGER(__name__).warning(f"Failed to send RichAd after download: {ad_error}")
             
             return
 
@@ -583,8 +601,26 @@ async def handle_download(bot_client, event, post_url: str, user_client=None, in
                             f"✅ **Download complete**{remaining_msg}",
                             buttons=upgrade_markup.to_telethon()
                         )
+                        
+                        # Show RichAds after download completes for free users
+                        if richads.is_enabled():
+                            try:
+                                sender = await event.get_sender()
+                                lang_code = getattr(sender, 'lang_code', 'en') or 'en'
+                                await richads.send_ad_to_user(bot, event.chat_id, lang_code)
+                            except Exception as ad_error:
+                                LOGGER(__name__).warning(f"Failed to send RichAd after download: {ad_error}")
                     else:
                         await event.respond("✅ **Download complete**")
+                        
+                        # Show RichAds after download completes for premium users
+                        if richads.is_enabled():
+                            try:
+                                sender = await event.get_sender()
+                                lang_code = getattr(sender, 'lang_code', 'en') or 'en'
+                                await richads.send_ad_to_user(bot, event.chat_id, lang_code)
+                            except Exception as ad_error:
+                                LOGGER(__name__).warning(f"Failed to send RichAd after download: {ad_error}")
             except asyncio.TimeoutError:
                 LOGGER(__name__).error(f"Single file download timeout for user {event.sender_id} after 45 minutes: {filename}")
                 try:

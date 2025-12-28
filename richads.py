@@ -74,6 +74,8 @@ class RichAdsManager:
         
         try:
             session = await self._get_session()
+            LOGGER(__name__).info(f"RichAds: Fetching ads from API for user {telegram_id} (lang: {language_code})")
+            
             async with session.post(
                 RICHADS_API_URL,
                 json=payload,
@@ -83,16 +85,19 @@ class RichAdsManager:
                 if response.status == 200:
                     ads = await response.json()
                     if ads and len(ads) > 0:
+                        LOGGER(__name__).info(f"✅ RichAds: Received {len(ads)} ad(s) for user {telegram_id}")
                         return ads
-                    return None
+                    else:
+                        LOGGER(__name__).info(f"⚠️ RichAds: No ads available right now for user {telegram_id} - RichAds server has no ads in inventory")
+                        return None
                 else:
-                    LOGGER(__name__).warning(f"RichAds API error: {response.status}")
+                    LOGGER(__name__).warning(f"❌ RichAds: API error {response.status} for user {telegram_id}")
                     return None
         except asyncio.TimeoutError:
-            LOGGER(__name__).warning("RichAds API timeout")
+            LOGGER(__name__).warning(f"❌ RichAds: API timeout while fetching ads for user {telegram_id}")
             return None
         except Exception as e:
-            LOGGER(__name__).error(f"RichAds fetch error: {e}")
+            LOGGER(__name__).error(f"❌ RichAds: Fetch error for user {telegram_id}: {e}")
             return None
     
     async def notify_impression(self, notification_url: str) -> bool:
@@ -133,6 +138,7 @@ class RichAdsManager:
         ads = await self.fetch_ad(language_code=language_code, telegram_id=str(chat_id))
         
         if not ads or len(ads) == 0:
+            LOGGER(__name__).info(f"⚠️ RichAds: User {chat_id} requested ad but no ads available at this moment - user will NOT see ad")
             return False
         
         ad = ads[0]  # Use first ad
@@ -190,6 +196,8 @@ class RichAdsManager:
             if notification_url:
                 await self.notify_impression(notification_url)
             
+            ad_title = ad.get("title", "Ad")
+            LOGGER(__name__).info(f"✅ RichAds: Ad '{ad_title}' successfully sent to user {chat_id}")
             return True
             
         except Exception as e:
